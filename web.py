@@ -1,3 +1,22 @@
+import os
+import json
+import firebase_admin
+from firebase_admin import credentials, firestore
+from google.cloud.firestore_v1.base_query import FieldFilter
+
+# 判斷是在 Vercel 還是本地
+if os.path.exists('serviceAccountKey.json'):
+    # 本地環境：讀取檔案
+    cred = credentials.Certificate('serviceAccountKey.json')
+else:
+    # 雲端環境：從環境變數讀取 JSON 字串
+    firebase_config = os.getenv('FIREBASE_CONFIG')
+    cred_dict = json.loads(firebase_config)
+    cred = credentials.Certificate(cred_dict)
+
+firebase_admin.initialize_app(cred)
+
+
 from flask import Flask, render_template, request
 from datetime import datetime
 import random
@@ -15,7 +34,21 @@ def index():
     link += "<a href=/math>數學運算</a><hr>" 
     link += "<a href=/math2>次方與根號計算</a><hr>" 
     link += "<a href=/cup>擲茭</a><hr>"
+    link += "<a href=/read>讀取Firestore資料(根據lab遞減排序，取前4名)</a><br>"
     return link
+
+@app.route("/read")
+def read():
+    db = firestore.client()
+
+    Temp = ""
+    collection_ref = db.collection("靜宜資管")
+    docs = collection_ref.order_by("lab",direction=firestore.Query.DESCENDING).limit(4).get()
+    for doc in docs:
+        Temp +=str(doc.to_dict()) +"<br>"
+        print("文件內容：{}".format(doc.to_dict()))
+
+    return Temp
 
 @app.route("/mis")
 def course():
