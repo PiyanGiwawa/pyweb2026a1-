@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>石詠澤簡介</title>
+    <style type="text/css">
+        * {
+            font-family: "標楷體";
+            margin-left: auto;
+            margin-right: auto;
+        }
+        h1 {
+            color: blue;
+            font-size: 60px;
+        }
+        h2 {
+            color: #33ff33;
+            font-size: 40px;
+        }
+    </style>
+    <script>
+        function change1() {
+            document.getElementById("pic").src = "static/mountain.jpg";
+            document.getElementById("h2text").innerText = "靜宜資管";
+        }
+
+        function change2() {
+            document.getElementById("pic").src = "static/cliff.jpg";
+            document.getElementById("h2text").innerText = "SHIH YUNG TSE";
+        }
+    </script>
+</head>
+<body>
+    <table width="70">
+        <tr>
+            <td>
+                <img src="static/cliff.jpg" id="pic" onmouseover="change1()" onmouseout="change2()">
+            </td>
+        </tr>
+    </table>
+
+    <h1>石詠澤</h1>
+    <h2 id="h2text">SHIH YUNG TSE</h2>
+
+    <table width="70" border="1">
+        <tr>
+            <td>
+                靜宜資管: <a href="https://csim.pu.edu.tw/" target="_blank">https://csim.pu.edu.tw/</a><br>
+                G-Mail: iphone10good@gmail.com<br>
+            </td>
+            <td>
+                大象席地而坐電影配樂<br>
+                <audio controls>
+                    <source src="static/elephant.mp3" type="audio/mP3">
+                </audio><br>
+            </td>
+            <td>
+                不要去臺灣<br>
+                <iframe src="https://www.youtube.com/embed/pW88QFpHXa8" allowfullscreen></iframe>
+            </td>
+        </tr>
+    </table>
+    <a href="/">返回首頁</a>
+    <a href="/mis">課程名稱</a>
+    <a href="/today">今天日期</a>
+</body>
+</html>
