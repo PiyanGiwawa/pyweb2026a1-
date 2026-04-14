@@ -16,7 +16,6 @@ else:
 
 firebase_admin.initialize_app(cred)
 
-
 from flask import Flask, render_template, request
 from datetime import datetime
 import random
@@ -35,24 +34,40 @@ def index():
     link += "<a href=/math2>次方與根號計算</a><hr>" 
     link += "<a href=/cup>擲茭</a><hr>"
     link += "<a href=/read>讀取Firestore資料(根據lab遞減排序，取前4名)</a><br>"
+    link += "<a href=/search>查詢老師研究室</a><hr>"
     return link
 
-@app.route("/read")
-def read():
-    db = firestore.client()
+@app.route("/search", methods=["GET", "POST"])
+def search():
+    if request.method == "POST":
+        keyword = request.form["keyword"]
 
-    Temp = ""
-    collection_ref = db.collection("靜宜資管")
-    docs = collection_ref.order_by("lab",direction=firestore.Query.DESCENDING).limit(4).get()
-    for doc in docs:
-        Temp +=str(doc.to_dict()) +"<br>"
-        print("文件內容：{}".format(doc.to_dict()))
+        db = firestore.client()
+        collection_ref = db.collection("靜宜資管2026a")
 
-    return Temp
+        docs = collection_ref.get()
 
-@app.route("/mis")
-def course():
-    return "<h1>資訊管理導論</h1><a href=/>回到網站首頁</a>"
+        result = ""
+
+        for doc in docs:
+            user = doc.to_dict()
+            if keyword in user["name"]:
+                result += f"{user['name']}老師的研究室在 {user['lab']}<br>"
+
+        if result == "":
+            result = "查無資料"
+
+        return result + "<br><a href=/search>返回</a>"
+
+    return """
+    <h2>查詢老師研究室</h2>
+    <form method="post">
+        請輸入老師姓名：
+        <input type="text" name="keyword">
+        <input type="submit" value="查詢">
+    </form>
+    <a href="/">回首頁</a>
+    """
 
 @app.route("/today")
 def today():
