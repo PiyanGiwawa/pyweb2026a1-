@@ -37,6 +37,11 @@ def index():
     link += "<a href=/search>查詢老師研究室</a><hr>"
     return link
 
+@app.route("/sp1")
+def sp1():
+    R = "20260421"
+    return R
+    
 @app.route("/search", methods=["GET", "POST"])
 def search():
     if request.method == "POST":
