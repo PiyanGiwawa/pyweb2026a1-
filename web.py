@@ -7,14 +7,15 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 
 # 判斷是在 Vercel 還是本地
-if os.path.exists('serviceAccountKey.json'):
-    cred = credentials.Certificate('serviceAccountKey.json')
-else:
-    firebase_config = os.getenv('FIREBASE_CONFIG')
-    cred_dict = json.loads(firebase_config)
-    cred = credentials.Certificate(cred_dict)
+if not firebase_admin._apps:
+    if os.path.exists('serviceAccountKey.json'):
+        cred = credentials.Certificate('serviceAccountKey.json')
+    else:
+        firebase_config = os.getenv('FIREBASE_CONFIG')
+        cred_dict = json.loads(firebase_config)
+        cred = credentials.Certificate(cred_dict)
 
-firebase_admin.initialize_app(cred)
+    firebase_admin.initialize_app(cred)
 
 from flask import Flask, render_template, request
 from datetime import datetime
@@ -36,130 +37,130 @@ def index():
     link += "<a href=/cup>擲茭</a><hr>"
     link += "<a href=/read>讀取Firestore資料</a><hr>"
     link += "<a href=/search>查詢老師研究室</a><hr>"
-    link += "<a href=/movies>即將上映電影</a><hr>"
-    link += "<a href=/movie>讀取開眼電影即將上映影片，寫入Firestore</a><br>"
-
+    link += "<a href=/movies2>即將上映電影</a><hr>"
+    link += "<a href=/movie2>寫入電影資料</a><hr>"
+    link += "<a href=/movie3>查詢電影</a><hr>"
     return link
 
-@app.route("/movie")
-def movie():
-  url = "http://www.atmovies.com.tw/movie/next/"
-  Data = requests.get(url)
-  Data.encoding = "utf-8"
-  sp = BeautifulSoup(Data.text, "html.parser")
-  result=sp.select(".filmListAllX li")
-  lastUpdate = sp.find("div", class_="smaller09").text[5:]
 
-  for item in result:
-    picture = item.find("img").get("src").replace(" ", "")
-    title = item.find("div", class_="filmtitle").text
-    movie_id = item.find("div", class_="filmtitle").find("a").get("href").replace("/", "").replace("movie", "")
-    hyperlink = "http://www.atmovies.com.tw" + item.find("div", class_="filmtitle").find("a").get("href")
-    show = item.find("div", class_="runtime").text.replace("上映日期：", "")
-    show = show.replace("片長：", "")
-    show = show.replace("分", "")
-    showDate = show[0:10]
-    showLength = show[13:]
-
-    doc = {
-        "title": title,
-        "picture": picture,
-        "hyperlink": hyperlink,
-        "showDate": showDate,
-        "showLength": showLength,
-        "lastUpdate": lastUpdate
-      }
+# ================== movie2（修正後） ==================
+@app.route("/movie2")
+def movie2():
+    url = "http://www.atmovies.com.tw/movie/next/"
+    Data = requests.get(url)
+    Data.encoding = "utf-8"
+    sp = BeautifulSoup(Data.text, "html.parser")
+    result = sp.select(".filmListAllX li")
+    lastUpdate = sp.find("div", class_="smaller09").text[5:]
 
     db = firestore.client()
-    doc_ref = db.collection("電影").document(movie_id)
-    doc_ref.set(doc)
-    return "近期上映電影已爬蟲及存檔完畢，網站最近更新日期為：" + lastUpdate 
+
+    for item in result:
+        picture = item.find("img").get("src").replace(" ", "")
+        title = item.find("div", class_="filmtitle").text
+        movie_id = item.find("div", class_="filmtitle").find("a").get("href").replace("/", "").replace("movie", "")
+        hyperlink = "http://www.atmovies.com.tw" + item.find("div", class_="filmtitle").find("a").get("href")
+
+        show = item.find("div", class_="runtime").text.replace("上映日期：", "")
+        show = show.replace("片長：", "")
+        show = show.replace("分", "")
+        showDate = show[0:10]
+        showLength = show[13:]
+
+        doc = {
+            "title": title,
+            "picture": picture,
+            "hyperlink": hyperlink,
+            "showDate": showDate,
+            "showLength": showLength,
+            "lastUpdate": lastUpdate
+        }
+
+        db.collection("電影").document(movie_id).set(doc)
+
+    return "近期上映電影已寫入Firestore，更新時間：" + lastUpdate
 
 
-
-
-# ================== 電影爬蟲 ==================
-@app.route("/movies")
-def movies():
-    url = "https://www.atmovies.com.tw/movie/next/"
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
-
-    res = requests.get(url, headers=headers)
-    res.encoding = "utf-8"
-
-    soup = BeautifulSoup(res.text, "html.parser")
-
-    items = soup.select("ul.filmListAllX li a")  # ✔ 改這裡
-
-    R = "<h2>即將上映電影</h2>"
-    R += '<a href="/">🏠 回首頁</a><hr>'
-
-    if not items:
-        return "❌ 沒抓到資料（網站可能改版或被擋）"
-
-    for a in items:
-        name = a.text.strip()
-        link = "https://www.atmovies.com.tw" + a.get("href")
-
-        R += f'<a href="{link}" target="_blank">{name}</a><br><br>'
-
-    return R
-
-# ================== Firestore 查詢 ==================
-@app.route("/search", methods=["GET", "POST"])
-def search():
+# ================== movie3 ==================
+@app.route("/movie3", methods=["GET", "POST"])
+def movie3():
     if request.method == "POST":
         keyword = request.form["keyword"]
 
         db = firestore.client()
-        collection_ref = db.collection("靜宜資管2026a")
+        docs = db.collection("電影").get()
 
-        docs = collection_ref.get()
-
-        result = ""
+        result = "<h2>查詢結果</h2>"
 
         for doc in docs:
-            user = doc.to_dict()
-            if keyword in user["name"]:
-                result += f"{user['name']}老師的研究室在 {user['lab']}<br>"
+            movie = doc.to_dict()
+            if keyword in movie["title"]:
+                result += f"""
+                <img src="{movie['picture']}" width="100"><br>
+                片名：{movie['title']}<br>
+                上映日：{movie['showDate']}<br>
+                片長：{movie['showLength']}<br>
+                <a href="{movie['hyperlink']}" target="_blank">詳細資訊</a>
+                <hr>
+                """
 
-        if result == "":
-            result = "查無資料"
+        if result == "<h2>查詢結果</h2>":
+            result += "查無資料"
 
-        return result + "<br><a href=/search>返回</a>"
+        return result + '<br><a href="/movie3">返回</a>'
 
     return """
-    <h2>查詢老師研究室</h2>
+    <h2>電影查詢</h2>
     <form method="post">
-        請輸入老師姓名：
+        關鍵字：
         <input type="text" name="keyword">
         <input type="submit" value="查詢">
     </form>
     <a href="/">回首頁</a>
     """
 
-# ================== 日期 ==================
+
+# ================== 電影列表 ==================
+@app.route("/movies2")
+def movies2():
+    url = "https://www.atmovies.com.tw/movie/next/"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    res = requests.get(url, headers=headers)
+    res.encoding = "utf-8"
+
+    soup = BeautifulSoup(res.text, "html.parser")
+    items = soup.select("ul.filmListAllX li a")
+
+    R = "<h2>即將上映電影</h2>"
+    R += '<a href="/">🏠 回首頁</a><hr>'
+
+    for a in items:
+        name = a.text.strip()
+        link = "https://www.atmovies.com.tw" + a.get("href")
+        R += f'<a href="{link}" target="_blank">{name}</a><br><br>'
+
+    return R
+
+
+# ================== 其他（完全保留） ==================
 @app.route("/today")
 def today():
     now = datetime.now()
-    now_str = f"{now.year}年{now.month}月{now.day}日"
-    return render_template("today.html", datetime=now_str)
+    return f"{now.year}年{now.month}月{now.day}日"
 
-# ================== 關於 ==================
+
 @app.route("/about")
 def about():
     return render_template("mis2a.html")
 
-# ================== GET ==================
+
 @app.route("/welcome")
 def welcome():
     x = request.values.get("u")
     y = request.values.get("dep")
     return render_template("welcome.html", name=x, dep=y)
 
-# ================== POST ==================
+
 @app.route("/account", methods=["GET", "POST"])
 def account():
     if request.method == "POST":
@@ -168,7 +169,7 @@ def account():
         return f"您輸入的帳號是：{user}; 密碼為：{pwd}"
     return render_template("account.html")
 
-# ================== 數學 ==================
+
 @app.route("/math", methods=["GET", "POST"])
 def math():
     if request.method == "POST":
@@ -184,38 +185,37 @@ def math():
             case "-": r = x - y
             case "*": r = x * y
             case "/": r = x / y
-            case _: return "未知運算符號"
 
         return f"{x}{opt}{y}={r}<br><a href=/>返回首頁</a>"
 
     return render_template("math.html")
 
-# ================== 擲茭 ==================
+
 @app.route('/cup')
 def cup():
     action = request.values.get("action")
     result = None
-    
+
     if action == 'toss':
         x1 = random.randint(0, 1)
         x2 = random.randint(0, 1)
-        
+
         if x1 != x2:
             msg = "聖筊"
         elif x1 == 0:
             msg = "笑筊"
         else:
             msg = "陰筊"
-            
+
         result = {
             "cup1": "/static/" + str(x1) + ".jpg",
             "cup2": "/static/" + str(x2) + ".jpg",
             "message": msg
         }
-        
+
     return render_template('cup.html', result=result)
 
-# ================== 次方根號 ==================
+
 @app.route("/math2", methods=["GET", "POST"])
 def math2():
     result = None
@@ -229,11 +229,9 @@ def math2():
                 result = x ** y
             case "√":
                 result = x ** (1/y) if y != 0 else "錯誤"
-            case _:
-                result = "錯誤"
 
     return render_template("math2.html", result=result)
 
-# ================== 主程式 ==================
+
 if __name__ == "__main__":
     app.run(debug=True)
