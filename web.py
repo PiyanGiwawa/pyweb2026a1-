@@ -41,6 +41,7 @@ def index():
     link += "<a href=/movie2>寫入電影資料</a><hr>"
     link += "<a href=/movie3>查詢電影</a><hr>"
     link += "<a href=/road>十大肇事路口</a><hr>"
+    link += "<a href=/weather>天氣預報</a><hr>"
     return link
 
 
@@ -245,6 +246,41 @@ def road():
 
     return R
 
+@app.route("/weather", methods=["GET", "POST"])
+def weather():
+    result = ""
+
+    if request.method == "POST":
+        city = request.form["city"]
+        city = city.replace("台", "臺")
+
+        token = "rdec-key-123-45678-011121314"
+        url = "https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-C0032-001?Authorization=" + token + "&format=JSON&locationName=" + city
+
+        Data = requests.get(url)
+        data = Data.json()
+
+        try:
+            weather = data["records"]["location"][0]["weatherElement"][0]["time"][0]["parameter"]["parameterName"]
+            rain = data["records"]["location"][0]["weatherElement"][1]["time"][0]["parameter"]["parameterName"]
+
+            result = f"""
+            <h2>{city} 天氣預報</h2>
+            天氣：{weather}<br>
+            降雨機率：{rain}%<br><hr>
+            """
+
+        except:
+            result = "查無資料，請確認縣市名稱"
+
+    return result + """
+    <form method="post">
+        輸入縣市：
+        <input type="text" name="city">
+        <input type="submit" value="查詢">
+    </form>
+    <br><a href="/">回首頁</a>
+    """
 
 if __name__ == "__main__":
     app.run(debug=True)
