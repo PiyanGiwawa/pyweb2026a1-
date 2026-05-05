@@ -40,6 +40,7 @@ def index():
     link += "<a href=/movies2>即將上映電影</a><hr>"
     link += "<a href=/movie2>寫入電影資料</a><hr>"
     link += "<a href=/movie3>查詢電影</a><hr>"
+    link += "<a href=/road>十大肇事路口</a><hr>"
     return link
 
 
@@ -231,6 +232,18 @@ def math2():
                 result = x ** (1/y) if y != 0 else "錯誤"
 
     return render_template("math2.html", result=result)
+
+@app.route("/road")
+def road():
+    R = ""
+    url = "https://newdatacenter.taichung.gov.tw/api/v1/no-auth/resource.download?rid=a1b899c0-511f-4e3d-b22b-814982a97e41"
+    Data = requests.get(url)
+    JsonData = json.loads(Data.text)
+
+    for item in JsonData:
+        R += item["路口名稱"] + "，總共發生" + str(item["總件數"]) + "件事故<br>"
+
+    return R
 
 
 if __name__ == "__main__":
