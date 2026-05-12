@@ -51,37 +51,42 @@ def index():
 def webhook():
     # 讀取 Dialogflow 傳來的 JSON
     req = request.get_json(force=True)
+    
+    # 取得 Action 名稱
     action = req.get("queryResult").get("action")
     
     if action == "rateChoice":
         # 取得使用者選擇的分級 (例如: 輔12級)
         rate = req.get("queryResult").get("parameters").get("rate")
         
-        info = f"我是石詠澤開發的電影機器人，為您查詢【{rate}】的電影：\n\n"
+        # 準備回傳的初始文字
+        info = f"我是石詠澤設計的電影機器人，為您查詢【{rate}】的電影：\n"
         
         db = firestore.client()
-        # 注意：此處集合名稱必須與您 /rate 路由中 set 的名稱一致
+        # 💡 確保這裡的集合名稱跟您 Firestore 裡面的一模一樣
         collection_ref = db.collection("本週新片含分級")
-        docs = collection_ref.where("rate", "==", rate).get()
+        docs = collection_ref.get()
         
         result = ""
         for doc in docs:
             movie = doc.to_dict()
-            result += f"🎬 片名：{movie['title']}\n"
-            result += f"📅 上映：{movie['showDate']}\n"
-            result += f"🔗 介紹：{movie['hyperlink']}\n\n"
+            # 進行分級比對
+            if movie.get("rate") == rate:
+                result += "--------------------\n"
+                result += f"🎬 片名：{movie['title']}\n"
+                result += f"📅 上映：{movie['showDate']}\n"
+                result += f"🔗 介紹：{movie['hyperlink']}\n"
         
-        if not result:
-            info = f"抱歉，目前資料庫中沒有【{rate}】的電影。"
+        # 如果沒找到電影
+        if result == "":
+            info += f"\n目前資料庫中沒有【{rate}】的電影喔！"
         else:
             info += result
 
+        # 回傳給 Dialogflow
         return make_response(jsonify({"fulfillmentText": info}))
 
-    return make_response(jsonify({"fulfillmentText": "無此動作指令"}))
-
-
-
+    return make_response(jsonify({"fulfillmentText": "機器人目前不理解這個動作。"}))
 
 # ================== movie2（修正後） ==================
 @app.route("/movie2")
