@@ -1,4 +1,4 @@
-import requests
+                                                                                                                                                                           import requests
 from bs4 import BeautifulSoup
 
 import os
@@ -45,7 +45,9 @@ def index():
     link += "<a href=/rate>電影分級</a><hr>"
     return link
 
-
+@app.route("/demo")
+def about():
+    return render_template("demo.html")
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
